@@ -8,16 +8,28 @@ from selenium.webdriver.common.alert import Alert
 import smtplib, ssl
 
 
-email = ''
+email = 'nehuenv620@gmail.com'
 password = ''
 url = 'https://prenotami.esteri.it/Home'
 
-def send_mail_notification(email, msg):
+def send_mail_notification(email, passw, msg):
+
+    port = 465
+
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+        
+        server.login(email, passw)
+       
+        server.sendmail(email, email, msg)
+
     
-    pass
     
 
 def automate(url, email, password):
+
+    password = input('contraseña para aplicaciones: ')
 
     driver = webdriver.Chrome()
 
@@ -85,6 +97,6 @@ def automate(url, email, password):
 
 
 
-
-
-
+if __name__ == '__main__':
+    
+    pass
