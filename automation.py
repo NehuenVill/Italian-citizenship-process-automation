@@ -10,6 +10,7 @@ import imaplib
 import email
 from email.header import decode_header
 from datetime import datetime
+from getpass import getpass
 
 e_mail = 'nehuenv620@gmail.com'
 url = 'https://prenotami.esteri.it/Home'
@@ -82,13 +83,13 @@ def automate(url, email):
 
     print('......................Comenzando proceso......................')
 
-    password = input('Contraseña para aplicaciones de google: ')
+    password = getpass('Contraseña para aplicaciones de google: ')
 
-    user_pass = input('Contraseña para la página del gobierno italiano: ')
+    user_pass = getpass('Contraseña para la página del gobierno italiano: ')
 
-    email_pass = input('Contraseña de tu e-mail: ')
+    email_pass = getpass('Contraseña de tu e-mail: ')
 
-    opcion = input('Opcion: ')
+    opcion = getpass('Opcion: ')
 
     driver = webdriver.Chrome()
 
@@ -108,33 +109,46 @@ def automate(url, email):
 
     btn.click()
 
-    book_section = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.ID, "advanced"))
+    element = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.ID, "advanced"))
+
+    book_section = driver.find_element(By.ID, "advanced")
 
     book_section.click()
 
-    spanish = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
+    element = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
+
+    spanish = driver.find_element(By.XPATH, "//a[contains(text(),'SPA')]")
 
     spanish.click()
 
-    WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.CLASS_NAME, "button.primary"))
+    WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
 
-    book_btns = driver.find_elements(By.CLASS_NAME, 'button.primary')
+    sleep(2)
 
     rows = driver.find_elements(By.TAG_NAME, 'tr')
-
-    book_btn = None
-
-    for row in rows:
+    print('')
+    print(len(rows))
+    print('')
+    for i in range(len(rows)):
 
         if opcion == 'vdvv' or opcion == 'vtt' or opcion == 'vfue':
 
             print(opcion)
 
-            properties = driver.find_elements(By.TAG_NAME, 'td')
+            try:
+                
+                properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
+
+            except Exception:
+
+                print('Not actual field')
+                continue
 
             if properties[0].text == options_list[opcion][0] and properties[2].text == options_list[opcion][1]:
 
-                book_btn = properties.find_element(By.CLASS_NAME, 'button.primary')
+                book_btn = properties[3].find_element(By.PARTIAL_LINK_TEXT, '/Services/Booking')
+
+                book_btn.click()
 
                 break
             
@@ -144,12 +158,20 @@ def automate(url, email):
         else:
 
             print(opcion)
+    
+            properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
 
-            properties = driver.find_elements(By.TAG_NAME, 'td')
+            if len(properties) == 0:
 
+                print('Not field')
+
+                continue
+            
             if properties[0].text == options_list[opcion]:
 
-                book_btn = properties.find_element(By.CLASS_NAME, 'button.primary')
+                book_btn = properties[3].find_element(By.TAG_NAME, 'button')
+
+                book_btn.click()
 
                 break
 
@@ -157,9 +179,9 @@ def automate(url, email):
 
                 continue
 
-    book_btn.click()
+    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
 
-    check = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
+    check = driver.find_element(By.XPATH, "//input[@type='checkbox']")
 
     continue_btn = driver.find_element(By.ID, 'btnAvanti')
 
@@ -171,15 +193,23 @@ def automate(url, email):
         
     driver.switch_to.alert.accept()
 
-    book = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.ID, "btnPrenota"))
+    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.CLASS_NAME, 'day.availableDay'))
+
+    book = driver.find_element(By.ID, "btnPrenota")
+
+    sleep(1)
 
     dates = driver.find_elements(By.CLASS_NAME, 'day.availableDay')
 
-    dates[0].click()
+    selected_date = driver.find_element(By.CLASS_NAME, 'day.active')
 
-    month = driver.find_element(By.XPATH, "//th[@title='Select Month']").text.replace(' 2022', '')
+    selected_day = selected_date.text
+
+    print(selected_day)
 
     available_dates = []
+
+    month = driver.find_element(By.XPATH, "//th[@title='Select Month']").text.replace(' 2022', '')
 
     for date in dates:
             
@@ -189,13 +219,29 @@ def automate(url, email):
 
         available_dates.append(final_date)
 
+    if selected_date.get_attribute('class') == 'day disabled notAvailableDay active':
+
+        selected_date = dates[0]
+
+        selected_date.click()
+
+    print(f'theres {len(dates)} available dates.')
+
+    app_date = f'{selected_day} de {month}, 2022'
+
+    sleep(2)
+
     book.click()
 
     # input#idOtp, button.btn.btn-blue (ok button)
 
-    code_input = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.ID, 'idOtp'))
+    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, 'idOtp'))
 
-    ok_btn = driver.find_element(By.CLASS_NAME, 'button.btn.btn-blue')
+    sleep(1)
+
+    code_input = driver.find_element(By.ID, 'idOtp')
+
+    ok_btn = driver.find_element(By.CLASS_NAME, 'btn.btn-blue')
 
     code = find_email_code(email, email_pass)
 
@@ -203,17 +249,19 @@ def automate(url, email):
 
     ok_btn.click()
 
-    back_btn = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.CLASS_NAME, 'button.primary'))
+    element = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.CLASS_NAME, 'button.primary'))
+
+    back_btn = driver.find_element(By.CLASS_NAME, 'button.primary')
 
     back_btn.click()
 
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.CLASS_NAME,'button.primary'))
+    WebDriverWait(driver, 35).until(EC.presence_of_element_located, (By.CLASS_NAME,'button.primary'))
 
     msg = f"""
     El proceso de reclamar un turno para {options_list[opcion][0] if len(options_list[opcion]) == 2 else options_list[opcion]} ha sido terminado satisfactoriamente,
-    Este turno quedó agendado para el día {available_dates[0]}.
+    Este turno quedó agendado para el día {app_date}.
     Otras fechas disponibles son:
-    {available_dates[1:]}
+    {available_dates}
     """
 
     send_mail_notification(email, password, msg)
