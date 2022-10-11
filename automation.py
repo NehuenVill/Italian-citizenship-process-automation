@@ -37,6 +37,14 @@ with open('user_info.json') as f:
 # Adapt options_list to the Montevideo embasy.
 # Change all the prints to log the stages of the process better.
 
+options_list2 = {
+                'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE', #yes
+                'l'    : 'LEGALIZACIONES', #yes
+                'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', #yes
+                'ci' : ['CIUDADANÍA', 'Ciudadanía - reservas a partir del 01/11/2021'],
+                'cihma' : ['CIUDADANÍA', 'Ciudadanía para hijos mayores de edad de ciudadanos ya registrados - calendaro desde el 01/11/2021']
+}
+
 options_list = {
                 'sc'   : 'SERVICIOS CONSULARES',
                 'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE',
@@ -57,7 +65,7 @@ def send_mail_notification(email, passw, msg):
         
         server.login(email, passw)
         
-        server.sendmail(email, email, msg)
+        server.sendmail(email, email, msg, rcpt_options=['SMTPUTF8'])
 
 
 def find_email_code(mail, password):
@@ -72,7 +80,7 @@ def find_email_code(mail, password):
         imap = imaplib.IMAP4_SSL(imap_server)
         imap.login(mail, password)
 
-        print('Trying to find the code...')
+        print('Buscando el código...')
 
         imap.select("INBOX")
         
@@ -90,20 +98,14 @@ def find_email_code(mail, password):
 
         body = str(msg.get_payload(None, True))
 
-        print(f'Subject: {subject}')
-
-        print(body)
-
         if 'OTP Code:' in body:
 
             code = body.replace("""b'<meta http-equiv="Content-Type" content="text/html; charset=utf-8">OTP Code:""", '').replace("'", '')
-
-        print(code)
         
         imap.close()  
         imap.logout()
     
-    print(f'The code is: {code}')
+    print(f'El código es: {code}')
 
     return code
 
@@ -112,14 +114,6 @@ def find_email_code(mail, password):
 def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
     print('......................Comenzando proceso......................')
-
-    #password = getpass('Contraseña para aplicaciones de google: ')
-
-    #user_pass = getpass('Contraseña para la página del gobierno italiano: ')
-
-    #email_pass = getpass('Contraseña de tu e-mail: ')
-
-    #opcion = getpass('Opcion: ')
 
     driver = webdriver.Chrome()
 
@@ -151,7 +145,6 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
     spanish.click()
 
-
     try:
 
         WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
@@ -159,27 +152,22 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
         sleep(2)
 
         rows = driver.find_elements(By.TAG_NAME, 'tr')
-        print('')
-        print(len(rows))
-        print('')
+    
         for i in range(len(rows)):
 
-            if opcion == 'vdvv' or opcion == 'vtt' or opcion == 'vfue':
+            if opcion == 'ci' or opcion == 'cihma':
 
-                print(opcion)
+                print(f'La opción elegida es: {options_list[opcion][0]}')
+    
+                properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
 
-                try:
-                        
-                    properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
+                if len(properties) == 0:
 
-                except Exception:
-
-                    print('Not actual field')
                     continue
 
                 if properties[0].text == options_list[opcion][0] and properties[2].text == options_list[opcion][1]:
 
-                    book_btn = properties[3].find_element(By.PARTIAL_LINK_TEXT, '/Services/Booking')
+                    book_btn = properties[3].find_element(By.TAG_NAME, 'button')
 
                     book_btn.click()
 
@@ -190,13 +178,11 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
             else:
 
-                print(opcion)
-            
+                print(f'La opción elegida es: {options_list[opcion]}')
+       
                 properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
 
                 if len(properties) == 0:
-
-                    print('Not field')
 
                     continue
                     
@@ -234,11 +220,19 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
         dates = driver.find_elements(By.CLASS_NAME, 'day.availableDay')
 
-        selected_date = driver.find_element(By.CLASS_NAME, 'day.active')
+        try:
+
+            selected_date = driver.find_element(By.CLASS_NAME, 'day.active')
+
+        except Exception:
+
+            selected_date = dates[0]
+
+            selected_date.click()
 
         selected_day = selected_date.text
 
-        print(selected_day)
+        print(f'El día seleccionado es: {selected_day}')
 
         available_dates = []
 
@@ -258,7 +252,7 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
             selected_date.click()
 
-        print(f'theres {len(dates)} available dates.')
+        print(f'Hay {len(dates)} fechas disponibles.')
 
         app_date = f'{selected_day} de {month}, 2022'
 
@@ -274,7 +268,7 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
         code_input = driver.find_element(By.ID, 'idOtp')
 
-        ok_btn = driver.find_element(By.CLASS_NAME, 'btn.btn-blue')
+        ok_btn = driver.find_element(By.XPATH, "//button[text()='ok']")
 
         code = find_email_code(email, email_pass)
 
@@ -282,36 +276,34 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
         ok_btn.click()
 
-        sleep(1)
-
-        element = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.CLASS_NAME, 'button.primary'))
-
-        back_btn = driver.find_element(By.CLASS_NAME, 'button.primary')
-
-        back_btn.click()
-
-        WebDriverWait(driver, 35).until(EC.presence_of_element_located, (By.CLASS_NAME,'button.primary'))
+        sleep(3)
 
         msg = f"""
         El proceso de reclamar un turno para {options_list[opcion][0] if len(options_list[opcion]) == 2 else options_list[opcion]} ha sido terminado satisfactoriamente,
-        Este turno quedó agendado para el día {app_date}.
+        Este turno quedo agendado para el dia {app_date}.
         Otras fechas disponibles son:
         {available_dates}
         """
+
+        msg = msg.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U')
+
+        print(msg)
 
         send_mail_notification(gmail, google_app_pass, msg)
 
         print('......................Proceso terminado......................')
 
+        driver.close()
+
+        driver.quit()
+
         return True
 
-    except Exception:
+    except Exception as e:
 
-        print('No hay turno disponible.')
+        print(f'erorr is: {e}')
 
-        not_available = driver.find_element(By.CLASS_NAME, 'jconfirm-buttons')
-
-        not_available.click()
+        print('No se pudo concretar un turno / no hay turno disponible.')
 
         driver.close()
 
@@ -345,7 +337,9 @@ def scheduler():
 
             next_run = datetime(now.year, now.month, now.day, next_run_hour, next_run_minute, 0)
 
-            time_diff = now - next_run
+            print(f'El programa volverá a ejecutarse a las {next_run.hour}')
+
+            time_diff = next_run - now
 
             time_next_run = time_diff.total_seconds()
 
@@ -356,7 +350,9 @@ def scheduler():
 
             next_run = datetime(now.year, now.month, now.day, next_run_hour, next_run_minute, 0)
 
-            time_diff = now - next_run
+            print(f'El programa volverá a ejecutarse a las {next_run.hour}:{next_run.minute}')
+            
+            time_diff = next_run - now
 
             time_next_run = time_diff.total_seconds()
 
@@ -367,5 +363,4 @@ def scheduler():
 
 if __name__ == '__main__':
     
-    scheduler()
-    
+   scheduler()
