@@ -1,6 +1,4 @@
-from pickle import FALSE
 import smtplib
-from sre_constants import SUCCESS
 from selenium import webdriver
 from time import sleep
 from selenium.webdriver.common.by import By
@@ -23,6 +21,7 @@ google_app_pass = ''
 itgov_pass = ''
 mail_pass = ''
 option = ''
+g_mail = ''
 
 with open('user_info.json') as f:
 
@@ -33,6 +32,10 @@ with open('user_info.json') as f:
     itgov_pass = info['Italian government website password']
     mail_pass = info['email password']
     option = info['option']
+    g_mail = info['gmail']
+
+# Adapt options_list to the Montevideo embasy.
+# Change all the prints to log the stages of the process better.
 
 options_list = {
                 'sc'   : 'SERVICIOS CONSULARES',
@@ -50,11 +53,12 @@ def send_mail_notification(email, passw, msg):
 
     context = ssl.create_default_context()
 
-    with smtplib.SMTP_SSL("outlook.office365.com", port, context=context) as server:
+    with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
         
         server.login(email, passw)
-       
+        
         server.sendmail(email, email, msg)
+
 
 def find_email_code(mail, password):
 
@@ -65,7 +69,7 @@ def find_email_code(mail, password):
 
         sleep(5)
 
-        imap = imaplib.IMAP4_SSL(imap_server, port=993)
+        imap = imaplib.IMAP4_SSL(imap_server)
         imap.login(mail, password)
 
         print('Trying to find the code...')
@@ -84,30 +88,17 @@ def find_email_code(mail, password):
 
         subject = msg.get('Subject')
 
-        body = ''
-
-        for part in msg.walk():
-
-            if part.get_content_type() == "text/html":
-                
-                body += part.as_string()
-        print(body)
-
-        body = body.split('MIME-Version: 1.0\n')[1]
-
-        soup = BeautifulSoup(body, 'html.parser')
+        body = str(msg.get_payload(None, True))
 
         print(f'Subject: {subject}')
 
-        for paragraph in soup.find_all('p'):
+        print(body)
 
-            print(paragraph.text)
+        if 'OTP Code:' in body:
 
-            if 'OTP Code:' in paragraph.text:
-                
-                code = paragraph.text.replace('OTP Code:', '')
+            code = body.replace("""b'<meta http-equiv="Content-Type" content="text/html; charset=utf-8">OTP Code:""", '').replace("'", '')
 
-                break
+        print(code)
         
         imap.close()  
         imap.logout()
@@ -118,7 +109,7 @@ def find_email_code(mail, password):
 
 
 
-def automate(url, email, password, user_pass, email_pass, opcion):
+def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
     print('......................Comenzando proceso......................')
 
@@ -275,11 +266,11 @@ def automate(url, email, password, user_pass, email_pass, opcion):
 
         book.click()
 
-        # input#idOtp, button.btn.btn-blue (ok button)
-
         element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, 'idOtp'))
 
         sleep(1)
+
+        #check the ok_btn change all btn classes to xpaths or something.
 
         code_input = driver.find_element(By.ID, 'idOtp')
 
@@ -290,6 +281,8 @@ def automate(url, email, password, user_pass, email_pass, opcion):
         code_input.send_keys(code)
 
         ok_btn.click()
+
+        sleep(1)
 
         element = WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.CLASS_NAME, 'button.primary'))
 
@@ -306,7 +299,7 @@ def automate(url, email, password, user_pass, email_pass, opcion):
         {available_dates}
         """
 
-        send_mail_notification(email, password, msg)
+        send_mail_notification(gmail, google_app_pass, msg)
 
         print('......................Proceso terminado......................')
 
@@ -327,11 +320,11 @@ def automate(url, email, password, user_pass, email_pass, opcion):
         return False
 
 
-def scheduler(func):
+def scheduler():
 
     while True:
 
-        succes = func(url, e_mail)
+        succes = automate(url, e_mail, itgov_pass, mail_pass, google_app_pass, g_mail, option)
 
         if succes:
 
@@ -374,6 +367,5 @@ def scheduler(func):
 
 if __name__ == '__main__':
     
-    #automate(url, e_mail)
-
-    print(find_email_code(e_mail, 'Italia2022'))
+    scheduler()
+    
