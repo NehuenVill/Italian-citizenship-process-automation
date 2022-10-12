@@ -11,7 +11,6 @@ import email
 import ssl
 from datetime import date, datetime
 from getpass import getpass
-from bs4 import BeautifulSoup
 import json
 
 url = 'https://prenotami.esteri.it/Home'
@@ -37,7 +36,7 @@ with open('user_info.json') as f:
 # Adapt options_list to the Montevideo embasy.
 # Change all the prints to log the stages of the process better.
 
-options_list2 = {
+options_list = {
                 'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE', #yes
                 'l'    : 'LEGALIZACIONES', #yes
                 'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', #yes
@@ -45,7 +44,7 @@ options_list2 = {
                 'cihma' : ['CIUDADANÍA', 'Ciudadanía para hijos mayores de edad de ciudadanos ya registrados - calendaro desde el 01/11/2021']
 }
 
-options_list = {
+options_list2 = {
                 'sc'   : 'SERVICIOS CONSULARES',
                 'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE',
                 'vfue' : ['VISADOS', 'Solamente familiares de ciudadanos UE'],
@@ -115,7 +114,11 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
     print('......................Comenzando proceso......................')
 
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+
+    chrome_options.add_argument("--headless")
+
+    driver = webdriver.Chrome(options=chrome_options)
 
     driver.get(url)
 
