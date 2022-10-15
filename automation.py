@@ -20,6 +20,7 @@ google_app_pass = ''
 itgov_pass = ''
 mail_pass = ''
 option = ''
+embassy = ''
 g_mail = ''
 
 with open('user_info.json') as f:
@@ -32,16 +33,58 @@ with open('user_info.json') as f:
     mail_pass = info['email password']
     option = info['option']
     g_mail = info['gmail']
+    embassy = info['embassy']
 
 # Adapt options_list to the Montevideo embasy.
 # Change all the prints to log the stages of the process better.
 
 options_list = {
-                'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE', #yes
-                'l'    : 'LEGALIZACIONES', #yes
-                'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', #yes
+
+    'urm' : {
+                'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 
+                'l'    : 'LEGALIZACIONES', 
+                'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', 
                 'ci' : ['CIUDADANÍA', 'Ciudadanía - reservas a partir del 01/11/2021'],
                 'cihma' : ['CIUDADANÍA', 'Ciudadanía para hijos mayores de edad de ciudadanos ya registrados - calendaro desde el 01/11/2021']
+            },
+
+    'ba' : {
+                'divepas'  : ['DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 'Entrega de pasaportes'],
+                'divspas'  : ['DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 'Solicitud de Pasaporte'],
+                'rsi' : ['REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', 'Vice Consulado Honorario en San Isidro'],
+                'rtf' : ['REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', 'Corresponsal Consular en Tres de Febrero'],
+                'rz' : ['REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', 'Corresponsal Consular en Zarate'],
+                'rm' : ['REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL', 'Corresponsal Consular en Merlo'],
+                'ci' : ['CIUDADANÍA', 'Hijos directos mayores de edad'],
+                'cirec' : ['CIUDADANÍA', 'Reconstrucción de Ciudadania'],
+                'scn' : ['SERVICIOS CONSULARES', 'Notarial'],
+                'sce' : ['SERVICIOS CONSULARES', 'Estudios'],
+                'scln' : ['SERVICIOS CONSULARES', 'Legalizaciones para Naturalización'],
+                'scrc' : ['SERVICIOS CONSULARES', 'Certificación de traducciones actas del Registro Civil'],
+                'scps' : ['SERVICIOS CONSULARES', 'Oficina de Pensiones - Certificado Supervivencia'],
+                'scn' : ['SERVICIOS CONSULARES', 'Visas'],
+
+            },
+    
+    'cor' : {  
+                'div'  : 'DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 
+                'l'    : 'LEGALIZACIONES', 
+                'sc'   : 'SERVICIOS CONSULARES',
+                'ci' : 'CIUDADANÍA'
+            },
+
+    'ros' : {
+                'divp'  : ['DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 'Pasaportes'],
+                'divpos'  : ['DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 'PASSAPORTI POSADAS - Emisión de pasaportes'],
+                'divcon'  : ['DOCUMENTOS DE IDENTIDAD Y DE VIAJE', 'CONCORDIA - Emisión de pasaportes'],
+                'ldoc'    : ['LEGALIZACIONES', 'Legalización de documentación para trámites de ciudadanía italiana a presentar en Italia'], 
+                'ldv'    : ['LEGALIZACIONES', 'Declaración de valor'], 
+                'sc'   : 'SERVICIOS CONSULARES',
+                'ci' : 'CIUDADANÍA',
+                'cf' : 'CÓDIGO FISCAL',
+                'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL',     
+            }
+
 }
 
 options_list2 = {
@@ -53,6 +96,58 @@ options_list2 = {
                 'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL',
                 'vdvv' : ['VISADOS', 'Declaraciones de Valor y Visados de Estudio - Estudiantes con preinscripciòn Universitaly']}
     
+
+def find_option_chosen(em:str, op, driver, rows):
+
+    for i in range(len(rows)):
+
+        if len(options_list[em][op]) == 2:
+
+            print(f'La opción elegida es: {options_list[em][op][0]}')
+    
+            properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
+
+            if len(properties) == 0:
+
+                continue
+
+            if properties[0].text == options_list[em][op][0] and properties[2].text == options_list[em][op][1]:
+
+                book_btn = properties[3].find_element(By.TAG_NAME, 'button')
+
+                book_btn.click()
+
+                return True
+
+                break
+                    
+            else:
+                continue
+
+        else:
+
+            print(f'La opción elegida es: {options_list[em][op]}')
+       
+            properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
+
+            if len(properties) == 0:
+
+                continue
+                    
+            if properties[0].text == options_list[em][op]:
+
+                book_btn = properties[3].find_element(By.TAG_NAME, 'button')
+
+                book_btn.click()
+
+                return True
+
+                break
+
+            else:
+
+                continue
+
 
 def send_mail_notification(email, passw, msg):
 
@@ -110,13 +205,13 @@ def find_email_code(mail, password):
 
 
 
-def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
+def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, embassy):
 
     print('......................Comenzando proceso......................')
 
     chrome_options = Options()
 
-    chrome_options.add_argument("--headless")
+    #chrome_options.add_argument("--headless")
 
     driver = webdriver.Chrome(options=chrome_options)
 
@@ -136,13 +231,13 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
     btn.click()
 
-    element = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.ID, "advanced"))
+    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, "advanced"))
 
     book_section = driver.find_element(By.ID, "advanced")
 
     book_section.click()
 
-    element = WebDriverWait(driver, 100).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
+    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
 
     spanish = driver.find_element(By.XPATH, "//a[contains(text(),'SPA')]")
 
@@ -156,50 +251,25 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion):
 
         rows = driver.find_elements(By.TAG_NAME, 'tr')
     
-        for i in range(len(rows)):
+        if embassy == 'bs':
 
-            if opcion == 'ci' or opcion == 'cihma':
+            if find_option_chosen(embassy, opcion, driver, rows):
 
-                print(f'La opción elegida es: {options_list[opcion][0]}')
-    
-                properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
-
-                if len(properties) == 0:
-
-                    continue
-
-                if properties[0].text == options_list[opcion][0] and properties[2].text == options_list[opcion][1]:
-
-                    book_btn = properties[3].find_element(By.TAG_NAME, 'button')
-
-                    book_btn.click()
-
-                    break
-                    
-                else:
-                    continue
+                pass
 
             else:
 
-                print(f'La opción elegida es: {options_list[opcion]}')
-       
-                properties = driver.find_elements(By.TAG_NAME, 'tr')[i].find_elements(By.TAG_NAME, 'td')
+                next_btn = driver.find_element(By.ID, 'dataTableServices_next')
 
-                if len(properties) == 0:
+                next_btn.click()
 
-                    continue
-                    
-                if properties[0].text == options_list[opcion]:
+                sleep(1)
 
-                    book_btn = properties[3].find_element(By.TAG_NAME, 'button')
+                WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
 
-                    book_btn.click()
+                rows = driver.find_elements(By.TAG_NAME, 'tr')
 
-                    break
-
-                else:
-
-                    continue
+                find_option_chosen(embassy, opcion, driver, rows)
 
         element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
 
@@ -319,7 +389,7 @@ def scheduler():
 
     while True:
 
-        succes = automate(url, e_mail, itgov_pass, mail_pass, google_app_pass, g_mail, option)
+        succes = automate(url, e_mail, itgov_pass, mail_pass, google_app_pass, g_mail, option, embassy)
 
         if succes:
 
@@ -337,8 +407,14 @@ def scheduler():
 
             next_run_hour = hour + 1
             next_run_minute = 0
+            day = now.day
 
-            next_run = datetime(now.year, now.month, now.day, next_run_hour, next_run_minute, 0)
+            if next_run_hour == 24:
+
+                next_run_hour = 0
+                day += 1
+
+            next_run = datetime(now.year, now.month, day, next_run_hour, next_run_minute, 0)
 
             print(f'El programa volverá a ejecutarse a las {next_run.hour}')
 
