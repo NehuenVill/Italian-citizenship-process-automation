@@ -10,7 +10,6 @@ import imaplib
 import email
 import ssl
 from datetime import date, datetime
-from getpass import getpass
 import json
 
 url = 'https://prenotami.esteri.it/Home'
@@ -94,7 +93,8 @@ options_list2 = {
                 'l'    : 'LEGALIZACIONES',
                 'vtt'  : ['VISADOS', 'Todas tipologias de Visados'],
                 'rpec' : 'REGISTRO DE LA POBLACIÓN Y ESTADO CIVIL',
-                'vdvv' : ['VISADOS', 'Declaraciones de Valor y Visados de Estudio - Estudiantes con preinscripciòn Universitaly']}
+                'vdvv' : ['VISADOS', 'Declaraciones de Valor y Visados de Estudio - Estudiantes con preinscripciòn Universitaly']
+                }
     
 
 def find_option_chosen(em:str, op, driver, rows):
@@ -211,7 +211,7 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, 
 
     chrome_options = Options()
 
-    #chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless")
 
     driver = webdriver.Chrome(options=chrome_options)
 
@@ -270,6 +270,10 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, 
                 rows = driver.find_elements(By.TAG_NAME, 'tr')
 
                 find_option_chosen(embassy, opcion, driver, rows)
+
+        else:
+
+            find_option_chosen(embassy, opcion, driver, rows)
 
         element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
 
