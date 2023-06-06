@@ -11,6 +11,7 @@ import email
 import ssl
 from datetime import date, datetime
 import json
+from webdriver_manager.chrome import ChromeDriverManager
 
 url = 'https://prenotami.esteri.it/Home'
 
@@ -204,8 +205,7 @@ def find_email_code(mail, password):
     return code
 
 
-
-def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, embassy):
+def start_automation(url, email, user_pass):
 
     print('......................Comenzando proceso......................')
 
@@ -213,7 +213,7 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, 
 
     chrome_options.add_argument("--headless")
 
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(ChromeDriverManager().install())
 
     driver.get(url)
 
@@ -231,162 +231,165 @@ def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, 
 
     btn.click()
 
-    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, "advanced"))
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, "advanced"))
 
     book_section = driver.find_element(By.ID, "advanced")
 
     book_section.click()
 
-    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//a[text()[contains('SPA')]]"))
 
     spanish = driver.find_element(By.XPATH, "//a[contains(text(),'SPA')]")
 
     spanish.click()
 
-    try:
+    sleep(0.7)
 
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
 
-        sleep(2)
-
-        rows = driver.find_elements(By.TAG_NAME, 'tr')
+def automate(url, email, user_pass, email_pass, google_app_pass, gmail, opcion, embassy, driver : webdriver.Chrome):
     
-        if embassy == 'bs':
-
-            if find_option_chosen(embassy, opcion, driver, rows):
-
-                pass
-
-            else:
-
-                next_btn = driver.find_element(By.ID, 'dataTableServices_next')
-
-                next_btn.click()
-
-                sleep(1)
-
-                WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
-
-                rows = driver.find_elements(By.TAG_NAME, 'tr')
-
-                find_option_chosen(embassy, opcion, driver, rows)
-
-        else:
-
-            find_option_chosen(embassy, opcion, driver, rows)
-
-        element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
-
-        check = driver.find_element(By.XPATH, "//input[@type='checkbox']")
-
-        continue_btn = driver.find_element(By.ID, 'btnAvanti')
-
-        check.click()
-
-        continue_btn.click()
-
-        WebDriverWait(driver, 5).until(EC.alert_is_present())
-            
-        driver.switch_to.alert.accept()
-
-        element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.CLASS_NAME, 'day.availableDay'))
-
-        book = driver.find_element(By.ID, "btnPrenota")
-
-        sleep(1)
-
-        dates = driver.find_elements(By.CLASS_NAME, 'day.availableDay')
+    while True:
 
         try:
 
-            selected_date = driver.find_element(By.CLASS_NAME, 'day.active')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
 
-        except Exception:
+            sleep(2)
 
-            selected_date = dates[0]
+            rows = driver.find_elements(By.TAG_NAME, 'tr')
+        
+            if embassy == 'bs':
 
-            selected_date.click()
+                if find_option_chosen(embassy, opcion, driver, rows):
 
-        selected_day = selected_date.text
+                    pass
 
-        print(f'El día seleccionado es: {selected_day}')
+                else:
 
-        available_dates = []
+                    next_btn = driver.find_element(By.ID, 'dataTableServices_next')
 
-        month = driver.find_element(By.XPATH, "//th[@title='Select Month']").text.replace(' 2022', '')
+                    next_btn.click()
 
-        for date in dates:
+                    sleep(1)
+
+                    WebDriverWait(driver, 5).until(EC.presence_of_element_located, (By.TAG_NAME, "tr"))
+
+                    rows = driver.find_elements(By.TAG_NAME, 'tr')
+
+                    find_option_chosen(embassy, opcion, driver, rows)
+
+            else:
+
+                find_option_chosen(embassy, opcion, driver, rows)
+
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.XPATH, "//input[@type='checkbox']"))
+
+            check = driver.find_element(By.XPATH, "//input[@type='checkbox']")
+
+            continue_btn = driver.find_element(By.ID, 'btnAvanti')
+
+            check.click()
+
+            continue_btn.click()
+
+            WebDriverWait(driver, 5).until(EC.alert_is_present())
                 
-            date_day = date.text
+            driver.switch_to.alert.accept()
 
-            final_date = f'{date_day} de {month}, 2022'
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.CLASS_NAME, 'day.availableDay'))
 
-            available_dates.append(final_date)
+            book = driver.find_element(By.ID, "btnPrenota")
 
-        if selected_date.get_attribute('class') == 'day disabled notAvailableDay active':
+            sleep(1)
 
-            selected_date = dates[0]
+            dates = driver.find_elements(By.CLASS_NAME, 'day.availableDay')
 
-            selected_date.click()
+            try:
 
-        print(f'Hay {len(dates)} fechas disponibles.')
+                selected_date = driver.find_element(By.CLASS_NAME, 'day.active')
 
-        app_date = f'{selected_day} de {month}, 2022'
+            except Exception:
 
-        sleep(2)
+                selected_date = dates[0]
 
-        book.click()
+                selected_date.click()
 
-        element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, 'idOtp'))
+            selected_day = selected_date.text
 
-        sleep(1)
+            print(f'El día seleccionado es: {selected_day}')
 
-        #check the ok_btn change all btn classes to xpaths or something.
+            available_dates = []
 
-        code_input = driver.find_element(By.ID, 'idOtp')
+            month = driver.find_element(By.XPATH, "//th[@title='Select Month']").text.replace(' 2022', '')
 
-        ok_btn = driver.find_element(By.XPATH, "//button[text()='ok']")
+            for date in dates:
+                    
+                date_day = date.text
 
-        code = find_email_code(email, email_pass)
+                final_date = f'{date_day} de {month}, 2022'
 
-        code_input.send_keys(code)
+                available_dates.append(final_date)
 
-        ok_btn.click()
+            if selected_date.get_attribute('class') == 'day disabled notAvailableDay active':
 
-        sleep(3)
+                selected_date = dates[0]
 
-        msg = f"""
-        El proceso de reclamar un turno para {options_list[opcion][0] if len(options_list[opcion]) == 2 else options_list[opcion]} ha sido terminado satisfactoriamente,
-        Este turno quedo agendado para el dia {app_date}.
-        Otras fechas disponibles son:
-        {available_dates}
-        """
+                selected_date.click()
 
-        msg = msg.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U')
+            print(f'Hay {len(dates)} fechas disponibles.')
 
-        print(msg)
+            app_date = f'{selected_day} de {month}, 2022'
 
-        send_mail_notification(gmail, google_app_pass, msg)
+            sleep(2)
 
-        print('......................Proceso terminado......................')
+            book.click()
 
-        driver.close()
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located, (By.ID, 'idOtp'))
 
-        driver.quit()
+            sleep(1)
 
-        return True
+            #check the ok_btn change all btn classes to xpaths or something.
 
-    except Exception as e:
+            code_input = driver.find_element(By.ID, 'idOtp')
 
-        print(f'erorr is: {e}')
+            ok_btn = driver.find_element(By.XPATH, "//button[text()='ok']")
 
-        print('No se pudo concretar un turno / no hay turno disponible.')
+            code = find_email_code(email, email_pass)
 
-        driver.close()
+            code_input.send_keys(code)
 
-        driver.quit()
+            ok_btn.click()
 
-        return False
+            sleep(3)
+
+            msg = f"""
+            El proceso de reclamar un turno para {options_list[embassy][opcion][0] if len(options_list[embassy][opcion]) == 2 else options_list[embassy][opcion]} ha sido terminado satisfactoriamente,
+            Este turno quedo agendado para el dia {app_date}.
+            Otras fechas disponibles son:
+            {available_dates}
+            """
+
+            msg = msg.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('Á', 'A').replace('É', 'E').replace('Í', 'I').replace('Ó', 'O').replace('Ú', 'U')
+
+            print(msg)
+
+            send_mail_notification(gmail, google_app_pass, msg)
+
+            print('......................Proceso terminado......................')
+
+            driver.close()
+
+            driver.quit()
+
+            return True
+
+        except Exception as e:
+
+            print(f'erorr is: {e}')
+
+            print('No se pudo concretar un turno / no hay turno disponible.')
+
+            return False
 
 
 def scheduler():
